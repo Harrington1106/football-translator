@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getGames } from "@/lib/api/worldcup26";
+import { getGames, getTeams } from "@/lib/api/worldcup26";
 
 // English → Chinese name mapping
 const CN_MAP: Record<string, string> = {
@@ -47,8 +47,34 @@ interface Scorer {
   goals: number;
 }
 
+// FIFA code → our team ID
+const FIFA_MAP: Record<string, string> = {
+  MEX:"mexico",RSA:"southafrica",KOR:"southkorea",CZE:"czechia",
+  CAN:"canada",BIH:"bosniaherzegovina",USA:"unitedstates",PAR:"paraguay",
+  QAT:"qatar",SUI:"switzerland",BRA:"brazil",MAR:"morocco",
+  HAI:"haiti",SCO:"scotland",AUS:"australia",TUR:"turkey",
+  GER:"germany",CUW:"curaçao",NED:"netherlands",JPN:"japan",
+  CIV:"ivorycoast",ECU:"ecuador",SWE:"sweden",TUN:"tunisia",
+  ESP:"spain",CPV:"capeverdeislands",BEL:"belgium",EGY:"egypt",
+  KSA:"saudiarabia",URU:"uruguay",IRN:"iran",NZL:"newzealand",
+  FRA:"france",SEN:"senegal",IRQ:"iraq",NOR:"norway",
+  ARG:"argentina",ALG:"algeria",AUT:"austria",JOR:"jordan",
+  POR:"portugal",COD:"congodr",ENG:"england",CRO:"croatia",
+  GHA:"ghana",PAN:"panama",UZB:"uzbekistan",COL:"colombia",
+};
+
 export async function GET() {
   const scorers = new Map<string, Scorer>();
+
+  // Build numeric ID → our team ID map from teams API
+  const teamIdMap: Record<string, string> = {};
+  try {
+    const teams = await getTeams();
+    for (const t of teams) {
+      const ourId = FIFA_MAP[t.fifa_code] || t.name_en?.toLowerCase().replace(/\s+/g, "") || t.id;
+      teamIdMap[t.id] = ourId;
+    }
+  } catch {}
 
   try {
     const games = await getGames();
@@ -59,13 +85,13 @@ export async function GET() {
         const key = `${s.name}|${g.home_team_id}`;
         const existing = scorers.get(key);
         if (existing) { existing.goals++; }
-        else { scorers.set(key, { name: toChinese(s.name), team: g.home_team_id, goals: 1 }); }
+        else { scorers.set(key, { name: toChinese(s.name), team: teamIdMap[g.home_team_id] || g.home_team_id, goals: 1 }); }
       }
       for (const s of awayScorers) {
         const key = `${s.name}|${g.away_team_id}`;
         const existing = scorers.get(key);
         if (existing) { existing.goals++; }
-        else { scorers.set(key, { name: toChinese(s.name), team: g.away_team_id, goals: 1 }); }
+        else { scorers.set(key, { name: toChinese(s.name), team: teamIdMap[g.away_team_id] || g.away_team_id, goals: 1 }); }
       }
     }
   } catch {}

@@ -225,24 +225,18 @@ export function HomeClient({ initialMatches, aiEnabled }: HomeClientProps) {
           <ScorerBoard />
         </section>
 
-        {/* ── 正在直播 ── */}
-        {liveMatches.length > 0 && (
-          <section className="mb-8">
-            <div className="flex items-center gap-3 mb-4">
-              <span className="w-2 h-2 rounded-full bg-red-500 live-dot" />
-              <h2 className="text-lg font-bold">正在直播</h2>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {liveMatches.map((match, i) => (
-                <MatchCard key={match.id} match={match} index={i} />
-              ))}
-            </div>
-          </section>
-        )}
-
         {/* ── 按赛制阶段排列 ── */}
         <div className="space-y-4">
-          {TOURNAMENT_STAGES.map((stage) => {
+          {/* Sort stages: live/upcoming first, then finished, nearest dates first */}
+          {TOURNAMENT_STAGES.slice().sort((a, b) => {
+            const ma = matchesByStage[a.key] || [];
+            const mb = matchesByStage[b.key] || [];
+            const aLive = ma.some(m => m.status === "live" || m.status === "upcoming");
+            const bLive = mb.some(m => m.status === "live" || m.status === "upcoming");
+            if (aLive && !bLive) return -1;
+            if (!aLive && bLive) return 1;
+            return 0;
+          }).map((stage) => {
             const stageMatches = matchesByStage[stage.key];
             if (!stageMatches?.length) return null;
 

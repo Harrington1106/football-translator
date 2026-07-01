@@ -219,8 +219,6 @@ export function MatchDetailClient({
           awayScore={match.awayScore}
           homeTeam={homeName}
           awayTeam={awayName}
-          headline={(match as any).headline}
-          displayClock={(match as any).displayClock}
         />
 
         {/* 实力对比 */}

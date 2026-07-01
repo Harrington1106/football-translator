@@ -1,6 +1,37 @@
 import type { Match, MatchEvent } from "@/lib/data/matches";
 import { getTeams } from "./worldcup26";
 
+// English scorer name → Chinese
+const CN_NAMES: Record<string, string> = {
+  "Kylian Mbappé": "姆巴佩", "Erling Haaland": "哈兰德", "Lionel Messi": "梅西",
+  "Julián Álvarez": "阿尔瓦雷斯", "Vinícius Júnior": "维尼修斯", "Jude Bellingham": "贝林厄姆",
+  "Bukayo Saka": "萨卡", "Harry Kane": "凯恩", "Lamine Yamal": "亚马尔",
+  "Jamal Musiala": "穆西亚拉", "Florian Wirtz": "维尔茨", "Cristiano Ronaldo": "C罗",
+  "Rafael Leão": "莱奥", "Antoine Griezmann": "格列兹曼", "Kevin De Bruyne": "德布劳内",
+  "Mohamed Salah": "萨拉赫", "Son Heung-min": "孙兴慜", "Federico Valverde": "巴尔韦德",
+  "Luka Modrić": "莫德里奇", "Achraf Hakimi": "哈基米", "Alphonso Davies": "戴维斯",
+  "Christian Pulisic": "普利西奇", "Cody Gakpo": "加克波", "Kaoru Mitoma": "三笘薰",
+  "Takefusa Kubo": "久保建英", "Nestory Irankunda": "伊兰昆达", "C. Metcalfe": "梅特卡夫",
+  "Antonio Nusa": "努萨", "Amad Diallo": "阿马德·迪亚洛", "Bradley Barcola": "巴尔科拉",
+  "Ousmane Dembélé": "登贝莱", "Brian Brobbey": "布罗比", "Matheus Cunha": "库尼亚",
+  "Anthony Elanga": "埃兰加", "Ismaïla Sarr": "伊斯梅拉·萨尔", "Mikel Oyarzabal": "奥亚萨瓦尔",
+  "Raphinha": "拉菲尼亚", "Rodrygo": "罗德里戈", "Pedri": "佩德里",
+  "Gavi": "加维", "Nico Williams": "尼科·威廉姆斯", "Leroy Sané": "萨内",
+  "Kai Havertz": "哈弗茨", "Niclas Füllkrug": "菲尔克鲁格", "Deniz Undav": "翁达夫",
+  "Marcus Rashford": "拉什福德", "Phil Foden": "福登", "Cole Palmer": "帕尔默",
+  "Darwin Núñez": "努涅斯", "Luis Díaz": "路易斯·迪亚斯", "Lautaro Martínez": "劳塔罗",
+  "Ángel Di María": "迪马利亚", "Enzo Fernández": "恩佐", "Alexis Mac Allister": "麦卡利斯特",
+  "Bruno Fernandes": "B费", "Bernardo Silva": "B席", "Khvicha Kvaratskhelia": "克瓦拉茨赫利亚",
+  "Victor Osimhen": "奥斯梅恩", "Mohammed Kudus": "库杜斯", "Mehdi Taremi": "塔雷米",
+  "Salem Al-Dawsari": "达瓦萨里", "Hee-chan Hwang": "黄喜灿", "Min-jae Kim": "金玟哉",
+  "Hakim Ziyech": "齐耶赫", "Youssef En-Nesyri": "恩内斯里", "Jonathan David": "乔纳森·戴维",
+  "Michael Olise": "奥利塞", "Kingsley Coman": "科曼", "Marcus Thuram": "马库斯·图拉姆",
+};
+function cnName(en: string): string {
+  const cleaned = en.replace(/\s+\d+(\+\d+)?'?\s*$/, "").trim().replace(/\\/g, "");
+  return CN_NAMES[cleaned] || CN_NAMES[en] || cleaned;
+}
+
 // Map FIFA codes & numeric IDs to our team IDs
 function fifaToId(code: string): string {
   const map: Record<string, string> = {
@@ -121,7 +152,8 @@ export async function adaptWC26Games(games: any[]): Promise<(Match | null)[]> {
   return games.map(g => {
     const hid = teamMap[g.home_team_id] || g.home_team_id;
     const aid = teamMap[g.away_team_id] || g.away_team_id;
-    if (!hid || !aid) return null;
+    // Skip placeholder matches (TBD opponents = "0")
+    if (!hid || !aid || hid === "0" || aid === "0") return null;
 
     const status = mapStatus(g);
     const stage = mapStage(g.type || "", g.group || "");
@@ -132,15 +164,15 @@ export async function adaptWC26Games(games: any[]): Promise<(Match | null)[]> {
     for (const s of homeScorers) {
       events.push({
         minute: s.minute, type: "goal", team: hid, player: s.name.toLowerCase().replace(/\s+/g, ""),
-        description: `${s.name}进球`,
-        beginnerExplanation: `第${s.minute}分钟，${s.name}进球！`,
+        description: `${cnName(s.name)}进球`,
+        beginnerExplanation: `第${s.minute}分钟，${cnName(s.name)}进球！`,
       });
     }
     for (const s of awayScorers) {
       events.push({
         minute: s.minute, type: "goal", team: aid, player: s.name.toLowerCase().replace(/\s+/g, ""),
-        description: `${s.name}进球`,
-        beginnerExplanation: `第${s.minute}分钟，${s.name}进球！`,
+        description: `${cnName(s.name)}进球`,
+        beginnerExplanation: `第${s.minute}分钟，${cnName(s.name)}进球！`,
       });
     }
 
