@@ -1,7 +1,7 @@
 import type { Match, MatchEvent } from "@/lib/data/matches";
 import { getTeams } from "./worldcup26";
 
-// Map FIFA codes to our team IDs
+// Map FIFA codes & numeric IDs to our team IDs
 function fifaToId(code: string): string {
   const map: Record<string, string> = {
     MEX: "mexico", RSA: "southafrica", KOR: "southkorea", CZE: "czechia",
@@ -97,14 +97,68 @@ export function adaptWC26Game(game: any, homeTeamName?: string, awayTeamName?: s
   };
 }
 
-// Build map from team ID to our team IDs
+// Build map from worldcup26 numeric team ID → our team ID
 let _teamMap: Record<string, string> | null = null;
-export async function getTeamIdMap(): Promise<Record<string, string>> {
+async function loadTeamMap(): Promise<Record<string, string>> {
   if (_teamMap) return _teamMap;
   const teams = await getTeams();
   _teamMap = {};
   for (const t of teams) {
-    _teamMap[t.id] = fifaToId(t.fifa_code || t.id);
+    const ourId = fifaToId(t.fifa_code || "");
+    if (ourId && ourId !== t.fifa_code?.toLowerCase()) {
+      _teamMap[t.id] = ourId;
+    } else {
+      // Fallback: use English name to guess
+      _teamMap[t.id] = t.name_en?.toLowerCase().replace(/\s+/g, "") || t.id;
+    }
   }
   return _teamMap;
+}
+
+export async function adaptWC26Games(games: any[]): Promise<(Match | null)[]> {
+  const teamMap = await loadTeamMap();
+  return games.map(g => {
+    const hid = teamMap[g.home_team_id] || g.home_team_id;
+    const aid = teamMap[g.away_team_id] || g.away_team_id;
+    if (!hid || !aid) return null;
+
+    const status = mapStatus(g);
+    const stage = mapStage(g.type || "", g.group || "");
+    const homeScorers = parseScorers(g.home_scorers || "");
+    const awayScorers = parseScorers(g.away_scorers || "");
+
+    const events: MatchEvent[] = [];
+    for (const s of homeScorers) {
+      events.push({
+        minute: s.minute, type: "goal", team: hid, player: s.name.toLowerCase().replace(/\s+/g, ""),
+        description: `${s.name}进球`,
+        beginnerExplanation: `第${s.minute}分钟，${s.name}进球！`,
+      });
+    }
+    for (const s of awayScorers) {
+      events.push({
+        minute: s.minute, type: "goal", team: aid, player: s.name.toLowerCase().replace(/\s+/g, ""),
+        description: `${s.name}进球`,
+        beginnerExplanation: `第${s.minute}分钟，${s.name}进球！`,
+      });
+    }
+
+    return {
+      id: `wc26-${g.id}`,
+      homeTeam: hid,
+      awayTeam: aid,
+      status,
+      homeScore: g.home_score ? parseInt(g.home_score) : undefined,
+      awayScore: g.away_score ? parseInt(g.away_score) : undefined,
+      kickoff: g.local_date ? new Date(g.local_date).toISOString() : "",
+      venue: "",
+      stage,
+      stageDescription: stage,
+      whyItMatters: "",
+      beginnerTips: [],
+      events: events.length > 0 ? events : undefined,
+      homeStrength: 3,
+      awayStrength: 3,
+    };
+  }).filter(Boolean) as Match[];
 }

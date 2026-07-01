@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getGames } from "@/lib/api/worldcup26";
-import { adaptWC26Game } from "@/lib/api/worldcup26-adapter";
+import { adaptWC26Games } from "@/lib/api/worldcup26-adapter";
 import { getTodayMatches as getStaticMatches } from "@/lib/data/matches";
 import fs from "fs";
 
@@ -43,8 +43,8 @@ export async function GET() {
     const games = await getGames();
     if (games.length > 0) {
       const enriched = loadEnriched();
-      matches = games.map((g: any) => {
-        const m = adaptWC26Game(g);
+      const adapted = await adaptWC26Games(games);
+      matches = adapted.map((m: any) => {
         if (!m) return null;
         const e = enriched[m.id];
         return {
