@@ -27,13 +27,14 @@ function mapStatus(game: any): "upcoming" | "live" | "finished" {
 }
 
 function mapStage(type: string, group: string): string {
-  if (type === "group") return "小组赛";
-  if (type === "Round of 32") return "32强赛";
-  if (type === "Round of 16") return "1/8决赛";
-  if (type === "Quarter-finals") return "1/4决赛";
-  if (type === "Semi-finals") return "半决赛";
-  if (type === "3rd Place") return "三四名决赛";
-  if (type === "Final") return "决赛";
+  const t = type.toLowerCase();
+  if (t === "group") return "小组赛";
+  if (t === "r32" || t === "round of 32") return "32强赛";
+  if (t === "r16" || t === "round of 16") return "1/8决赛";
+  if (t === "qf" || t === "quarter-finals") return "1/4决赛";
+  if (t === "sf" || t === "semi-finals") return "半决赛";
+  if (t === "third" || t === "3rd place") return "三四名决赛";
+  if (t === "final") return "决赛";
   return type;
 }
 
