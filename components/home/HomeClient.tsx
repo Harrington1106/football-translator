@@ -35,6 +35,7 @@ export function HomeClient({ initialMatches, aiEnabled }: HomeClientProps) {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSource, setAiSource] = useState<string>("static");
   const [expandedStage, setExpandedStage] = useState<string | null>(null);
+  const [manualToggle, setManualToggle] = useState(false); // track if user clicked
 
   // Try AI enrichment on mount
   useEffect(() => {
@@ -83,6 +84,12 @@ export function HomeClient({ initialMatches, aiEnabled }: HomeClientProps) {
     for (const m of matches) {
       if (!grouped[m.stage]) grouped[m.stage] = [];
       grouped[m.stage].push(m);
+    }
+    // Sort each stage by kickoff date
+    for (const stage of Object.keys(grouped)) {
+      grouped[stage].sort((a, b) =>
+        new Date(a.kickoff).getTime() - new Date(b.kickoff).getTime()
+      );
     }
     return grouped;
   }, [matches]);
@@ -227,29 +234,23 @@ export function HomeClient({ initialMatches, aiEnabled }: HomeClientProps) {
 
         {/* ── 按赛制阶段排列 ── */}
         <div className="space-y-4">
-          {/* Sort stages: live/upcoming first, then finished, nearest dates first */}
-          {TOURNAMENT_STAGES.slice().sort((a, b) => {
-            const ma = matchesByStage[a.key] || [];
-            const mb = matchesByStage[b.key] || [];
-            const aLive = ma.some(m => m.status === "live" || m.status === "upcoming");
-            const bLive = mb.some(m => m.status === "live" || m.status === "upcoming");
-            if (aLive && !bLive) return -1;
-            if (!aLive && bLive) return 1;
-            return 0;
-          }).map((stage) => {
+          {TOURNAMENT_STAGES.map((stage) => {
             const stageMatches = matchesByStage[stage.key];
             if (!stageMatches?.length) return null;
 
             const hasLive = stageMatches.some((m) => m.status === "live");
             const hasFinished = stageMatches.every((m) => m.status === "finished");
-            const isExpanded =
-              expandedStage === stage.key ||
-              (expandedStage === null && hasLive); // Only auto-expand stage with live match
+            const hasUpcoming = stageMatches.some((m) => m.status === "upcoming");
+            // Auto-expand: live matches or upcoming knockout stages. Otherwise collapsed.
+            // Auto-expand: stages with upcoming matches (32强, 16强 etc). User click overrides.
+            const isExpanded = manualToggle
+              ? expandedStage === stage.key
+              : (hasLive || hasUpcoming);
 
             return (
               <section key={stage.key}>
                 <button
-                  onClick={() => setExpandedStage(isExpanded ? null : stage.key)}
+                  onClick={() => { setManualToggle(true); setExpandedStage(isExpanded ? null : stage.key); }}
                   className="w-full flex items-center gap-3 group py-2"
                 >
                   <span
