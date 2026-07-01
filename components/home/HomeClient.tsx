@@ -102,12 +102,23 @@ export function HomeClient({ initialMatches, aiEnabled }: HomeClientProps) {
     const dates = [...new Set(liveOrUpcoming.map(m => toChinaDate(m.kickoff)))].sort();
     const today = dates[0] || toChinaDate(new Date().toISOString());
 
-    // Include all non-live matches + finished matches that were live earlier
+    // Include ALL non-live matches from today (finished + upcoming)
     const todayMatches = matches.filter(m =>
       m.status !== "live" && m.id !== liveMatch?.id && toChinaDate(m.kickoff) === today
     );
+    if (todayMatches.length === 0) return null;
     if (!todayMatches.length) return null;
-    todayMatches.sort((a, b) => matchScore(b) - matchScore(a));
+    // Sort: higher score → higher total stars → finished first
+    todayMatches.sort((a, b) => {
+      const diff = matchScore(b) - matchScore(a);
+      if (diff !== 0) return diff;
+      const aStr = (getTeam(a.homeTeam)?.strength||3) + (getTeam(a.awayTeam)?.strength||3);
+      const bStr = (getTeam(b.homeTeam)?.strength||3) + (getTeam(b.awayTeam)?.strength||3);
+      if (bStr !== aStr) return bStr - aStr;
+      if (a.status === "finished" && b.status !== "finished") return -1;
+      if (b.status === "finished" && a.status !== "finished") return 1;
+      return 0;
+    });
     return todayMatches[0];
   }, [matches]);
 
@@ -165,7 +176,7 @@ export function HomeClient({ initialMatches, aiEnabled }: HomeClientProps) {
         {bestMatch && bestMatch.id !== liveMatch?.id && (
           <section className="mb-8">
             <p className="text-sm font-medium text-muted-foreground text-center mb-3">
-              ⭐ 今日最值得看的比赛
+              {bestMatch.status === "finished" ? "⭐ 今日最精彩" : "⭐ 今日最值得看"}
             </p>
             <FeaturedMatch match={bestMatch} />
           </section>

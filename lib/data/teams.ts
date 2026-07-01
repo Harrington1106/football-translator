@@ -6,10 +6,9 @@ export interface Team {
   strength: number; color: string; starPlayers: string[];
 }
 
-// FIFA世界排名 → 星数: 1-5=5⭐  6-12=4⭐  13-25=3⭐  26-40=2⭐  40+=1⭐
-// 排名参考2026年4月FIFA官方排名
+// FIFA排名 → 星数: 1-3=5⭐  4-8=4⭐  9-20=3⭐  21-35=2⭐  35+=1⭐
 function s(r: number): number {
-  if (r <= 5) return 5; if (r <= 12) return 4; if (r <= 25) return 3; if (r <= 40) return 2; return 1;
+  if (r <= 3) return 5; if (r <= 8) return 4; if (r <= 20) return 3; if (r <= 35) return 2; return 1;
 }
 
 export const teams: Team[] = [
